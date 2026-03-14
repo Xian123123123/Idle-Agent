@@ -12,7 +12,7 @@ dependencies:
   flutter_riverpod: ^2.6.1
   shared_preferences: ^2.3.0
   google_fonts: ^6.2.1
-  purchases_flutter: ^7.0.0
+  purchases_flutter: ^8.0.0
   battery_plus: ^6.0.1
 
 dev_dependencies:
