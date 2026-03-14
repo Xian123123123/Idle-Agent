@@ -1,8 +1,12 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:battery_plus/battery_plus.dart';
 import '../../core/models/theme_model.dart';
 import '../../core/models/agent_model.dart';
+import '../../core/models/terminal_line.dart';
 import '../../core/engine/simulation_engine.dart';
+import '../settings/settings_provider.dart';
 import 'terminal_controller.dart';
 import 'terminal_painter.dart';
 
@@ -18,6 +22,9 @@ class _TerminalViewState extends ConsumerState<TerminalView>
   late AnimationController _cursorController;
   SimulationEngine? _engine;
   bool _cursorVisible = true;
+  bool _batteryPaused = false;
+  final Battery _battery = Battery();
+  StreamSubscription<BatteryState>? _batterySubscription;
 
   @override
   void initState() {
@@ -34,54 +41,85 @@ class _TerminalViewState extends ConsumerState<TerminalView>
       });
     _cursorController.forward();
 
-    // Start engine after build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _startEngine();
+      _startBatteryMonitoring();
     });
   }
 
   void _startEngine() {
+    final settings = ref.read(settingsProvider);
+    final agent = Agents.all.firstWhere(
+      (a) => a.id == settings.agentId,
+      orElse: () => Agents.gptEngineer,
+    );
     _engine?.dispose();
-    _engine = SimulationEngine(agent: Agents.gptEngineer);
+    _engine = SimulationEngine(agent: agent, speedFactor: settings.speedFactor);
     ref.read(terminalControllerProvider.notifier).clear();
     ref.read(terminalControllerProvider.notifier).subscribe(_engine!);
     _engine!.start();
   }
 
-  void updateAgent(AgentModel agent, {double speedFactor = 1.0}) {
-    _engine?.dispose();
-    _engine = SimulationEngine(agent: agent, speedFactor: speedFactor);
-    ref.read(terminalControllerProvider.notifier).clear();
-    ref.read(terminalControllerProvider.notifier).subscribe(_engine!);
-    _engine!.start();
-  }
-
-  void pauseEngine() {
-    _engine?.stop();
-  }
-
-  void resumeEngine() {
-    _engine?.start();
+  void _startBatteryMonitoring() {
+    _batterySubscription = _battery.onBatteryStateChanged.listen((state) async {
+      final settings = ref.read(settingsProvider);
+      if (state == BatteryState.charging) {
+        if (_batteryPaused) {
+          setState(() => _batteryPaused = false);
+          _engine?.start();
+        }
+        return;
+      }
+      final level = await _battery.batteryLevel;
+      if (level <= settings.batteryPauseLevel && !_batteryPaused) {
+        setState(() => _batteryPaused = true);
+        _engine?.stop();
+        ref.read(terminalControllerProvider.notifier).addLine(
+          const TerminalLine(text: '', type: LineType.blank),
+        );
+        ref.read(terminalControllerProvider.notifier).addLine(
+          const TerminalLine(
+            text: '\u23f8 Paused \u2014 battery low',
+            type: LineType.comment,
+          ),
+        );
+      }
+    });
   }
 
   @override
   void dispose() {
     _cursorController.dispose();
     _engine?.dispose();
+    _batterySubscription?.cancel();
     super.dispose();
+  }
+
+  TerminalTheme _currentTheme(SettingsState settings) {
+    return Themes.all.firstWhere(
+      (t) => t.id == settings.themeId,
+      orElse: () => Themes.hackerGreen,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final terminalState = ref.watch(terminalControllerProvider);
-    const theme = Themes.hackerGreen;
+    final settings = ref.watch(settingsProvider);
+    final theme = _currentTheme(settings);
+
+    // Restart engine when agent or speed changes
+    ref.listen(settingsProvider, (prev, next) {
+      if (prev?.agentId != next.agentId || prev?.speedFactor != next.speedFactor) {
+        _startEngine();
+      }
+    });
 
     return RepaintBoundary(
       child: Container(
         color: theme.background,
         child: Stack(
           children: [
-            // Terminal canvas
             CustomPaint(
               painter: TerminalPainter(
                 lines: terminalState.lines,
@@ -90,7 +128,6 @@ class _TerminalViewState extends ConsumerState<TerminalView>
               ),
               size: Size.infinite,
             ),
-            // Agent badge top-right
             if (_engine != null)
               Positioned(
                 top: 8,
@@ -103,7 +140,7 @@ class _TerminalViewState extends ConsumerState<TerminalView>
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    _engine!.agent.name,
+                    '${_engine!.agent.name}${_batteryPaused ? ' [paused]' : ''}',
                     style: TextStyle(
                       color: theme.textPrimary,
                       fontSize: 10,
