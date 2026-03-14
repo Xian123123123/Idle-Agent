@@ -1,0 +1,31 @@
+SHORT DESCRIPTION (80 chars):
+AI agents code on your idle screen. The ultimate developer screensaver.
+
+FULL DESCRIPTION:
+Idle Agent transforms your idle phone into a live AI coding terminal.
+
+When your phone charges or goes idle, watch AI agents write real-looking
+code, run tests, debug errors, and deploy systems — all on a beautiful
+developer terminal.
+
+FEATURES:
+• GPT Engineer agent (free) — writes Python, generates architecture, runs tests
+• Research Agent — trains ML models, logs experiments, runs ablations
+• DevOps Agent — Docker builds, Kubernetes deploys, CI/CD pipelines
+• Startup CTO — code reviews, architecture planning, sprint management
+
+5 TERMINAL THEMES:
+• Hacker Green (free) • Cyberpunk Neon • Minimal Dark
+• AI Research Lab • Retro UNIX
+
+BUILT FOR DEVELOPERS:
+• JetBrains Mono font
+• Realistic syntax highlighting
+• Error simulation with auto-fix
+• Battery-aware — pauses when battery is low
+
+ANDROID SCREENSAVER:
+Works as a native Android screensaver (DreamService) — activates
+automatically when charging. No manual launch needed.
+
+Idle Agent Pro: $4.99 one-time — all agents, all themes, all speeds.
