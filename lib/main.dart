@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'features/terminal/terminal_view.dart';
+import 'features/terminal/split_pane_view.dart';
 import 'features/settings/settings_screen.dart';
+import 'features/settings/settings_provider.dart';
 import 'features/onboarding/onboarding_screen.dart';
 import 'shared/app_theme.dart';
 
@@ -51,10 +53,14 @@ class MainScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsProvider);
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+    final useSplitPane = isLandscape && settings.autoSplitOnLandscape && settings.splitPaneEnabled;
+
     return Scaffold(
       body: Stack(
         children: [
-          const TerminalView(),
+          useSplitPane ? const SplitPaneView() : const TerminalView(),
           Positioned(
             top: 40,
             right: 16,

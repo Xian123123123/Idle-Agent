@@ -9,6 +9,8 @@ class SettingsState {
   final bool isPro;
   final int batteryPauseLevel;
   final bool deskMode;
+  final bool splitPaneEnabled;
+  final bool autoSplitOnLandscape;
 
   const SettingsState({
     this.agentId = 'gpt_engineer',
@@ -18,6 +20,8 @@ class SettingsState {
     this.isPro = false,
     this.batteryPauseLevel = 20,
     this.deskMode = true,
+    this.splitPaneEnabled = false,
+    this.autoSplitOnLandscape = true,
   });
 
   SettingsState copyWith({
@@ -28,6 +32,8 @@ class SettingsState {
     bool? isPro,
     int? batteryPauseLevel,
     bool? deskMode,
+    bool? splitPaneEnabled,
+    bool? autoSplitOnLandscape,
   }) {
     return SettingsState(
       agentId: agentId ?? this.agentId,
@@ -37,6 +43,8 @@ class SettingsState {
       isPro: isPro ?? this.isPro,
       batteryPauseLevel: batteryPauseLevel ?? this.batteryPauseLevel,
       deskMode: deskMode ?? this.deskMode,
+      splitPaneEnabled: splitPaneEnabled ?? this.splitPaneEnabled,
+      autoSplitOnLandscape: autoSplitOnLandscape ?? this.autoSplitOnLandscape,
     );
   }
 }
@@ -56,6 +64,8 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       isPro: prefs.getBool('isPro') ?? false,
       batteryPauseLevel: prefs.getInt('batteryPauseLevel') ?? 20,
       deskMode: prefs.getBool('deskMode') ?? true,
+      splitPaneEnabled: prefs.getBool('splitPaneEnabled') ?? false,
+      autoSplitOnLandscape: prefs.getBool('autoSplitOnLandscape') ?? true,
     );
   }
 
@@ -99,6 +109,18 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     state = state.copyWith(deskMode: enabled);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('deskMode', enabled);
+  }
+
+  Future<void> setSplitPaneEnabled(bool enabled) async {
+    state = state.copyWith(splitPaneEnabled: enabled);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('splitPaneEnabled', enabled);
+  }
+
+  Future<void> setAutoSplitOnLandscape(bool enabled) async {
+    state = state.copyWith(autoSplitOnLandscape: enabled);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('autoSplitOnLandscape', enabled);
   }
 }
 

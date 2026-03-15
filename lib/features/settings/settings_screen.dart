@@ -33,6 +33,10 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 8),
           _buildScreensaverButton(context),
           const SizedBox(height: 24),
+          _sectionHeader('Display'),
+          const SizedBox(height: 8),
+          _buildSplitPaneToggle(context, ref, settings),
+          const SizedBox(height: 24),
           _sectionHeader('Agent Selection'),
           const SizedBox(height: 8),
           _buildAgentGrid(context, ref, settings),
@@ -329,6 +333,63 @@ class SettingsScreen extends ConsumerWidget {
                 },
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSplitPaneToggle(BuildContext context, WidgetRef ref, SettingsState settings) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF161B22),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Text(
+                      'Split Pane (Landscape)',
+                      style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
+                    if (!settings.isPro) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFD700),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                        child: const Text(
+                          'PRO',
+                          style: TextStyle(color: Colors.black, fontSize: 8, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Show two agents side by side when phone is horizontal',
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: settings.splitPaneEnabled,
+            activeColor: const Color(0xFF00FF41),
+            onChanged: settings.isPro
+                ? (value) {
+                    ref.read(settingsProvider.notifier).setSplitPaneEnabled(value);
+                  }
+                : null,
           ),
         ],
       ),
