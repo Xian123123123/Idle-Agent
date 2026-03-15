@@ -1,7 +1,9 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../../core/models/terminal_line.dart';
+import '../../core/models/text_span_line.dart';
 import '../../core/models/theme_model.dart';
+import '../../core/engine/syntax_highlighter.dart';
 
 class TerminalPainter extends CustomPainter {
   final List<TerminalLine> lines;
@@ -9,6 +11,9 @@ class TerminalPainter extends CustomPainter {
   final double fontSize;
   final double scrollOffset;
   final bool showCursor;
+
+  /// Cache of highlighted tokens keyed by line text + theme id.
+  static final Map<String, List<HighlightToken>> _highlightCache = {};
 
   TerminalPainter({
     required this.lines,
@@ -39,6 +44,25 @@ class TerminalPainter extends CustomPainter {
     }
   }
 
+  List<HighlightToken> _getHighlightedTokens(TerminalLine line) {
+    // Only syntax-highlight code lines; other types use their single color.
+    if (line.type != LineType.code) {
+      return [HighlightToken(text: line.text, color: _colorForType(line.type))];
+    }
+
+    final cacheKey = '${theme.id}::${line.text}';
+    final cached = _highlightCache[cacheKey];
+    if (cached != null) return cached;
+
+    final tokens = SyntaxHighlighter.highlight(line.text, theme);
+    // Keep cache bounded.
+    if (_highlightCache.length > 2000) {
+      _highlightCache.clear();
+    }
+    _highlightCache[cacheKey] = tokens;
+    return tokens;
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
     final bgPaint = Paint()..color = theme.background;
@@ -62,6 +86,9 @@ class TerminalPainter extends CustomPainter {
       final y = paddingTop + (i - startLine) * lineHeight;
       if (y > size.height) break;
 
+      final tokens = _getHighlightedTokens(line);
+
+      // Build a paragraph with multiple styled spans.
       final paragraphBuilder = ui.ParagraphBuilder(
         ui.ParagraphStyle(
           fontFamily: 'JetBrains Mono',
@@ -69,9 +96,16 @@ class TerminalPainter extends CustomPainter {
           maxLines: 1,
           ellipsis: '...',
         ),
-      )
-        ..pushStyle(ui.TextStyle(color: _colorForType(line.type)))
-        ..addText(line.text);
+      );
+
+      for (final token in tokens) {
+        paragraphBuilder.pushStyle(ui.TextStyle(
+          color: token.color,
+          fontWeight: token.bold ? FontWeight.bold : FontWeight.normal,
+        ));
+        paragraphBuilder.addText(token.text);
+        paragraphBuilder.pop();
+      }
 
       final paragraph = paragraphBuilder.build();
       paragraph.layout(ui.ParagraphConstraints(width: size.width - paddingLeft * 2));
