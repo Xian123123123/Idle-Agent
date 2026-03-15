@@ -2,6 +2,7 @@ import 'dart:async';
 import '../models/terminal_line.dart';
 import '../models/agent_model.dart';
 import '../models/user_profile.dart';
+import 'daily_project.dart';
 import 'scenario_bank.dart';
 import 'token_bank.dart';
 
@@ -77,22 +78,52 @@ class SimulationEngine {
     final scenario = TokenBank.pick(scenarios);
     final lines = scenario();
 
-    // Add agent header
+    // Add structured agent header
     final agentDisplayName = (profile != null && profile!.isConfigured && profile!.agentName.isNotEmpty)
-        ? profile!.agentName
+        ? '${profile!.agentName}-Agent'
         : agent.name;
+    final projectSlug = (profile != null && profile!.isConfigured && profile!.projectSlug.isNotEmpty)
+        ? profile!.projectSlug
+        : DailyProjectEngine.today().slug;
+    final stack = (profile != null && profile!.isConfigured && profile!.techStack.isNotEmpty)
+        ? profile!.techStack
+        : 'Python 3.11';
+    final taskLabel = TokenBank.pick(const ['auth module', 'data pipeline', 'api layer', 'test suite', 'core engine']);
+    final speedLabel = '${speedFactor}x';
+
+    // Pad content to fixed width inside the box
+    const boxWidth = 54;
+    final nameLine = '\u25C8  $agentDisplayName';
+    const statusTag = 'ACTIVE  \u25CF';
+    final namePad = boxWidth - 4 - nameLine.length - statusTag.length;
+    final nameLinePadded = '  $nameLine${' ' * (namePad > 0 ? namePad : 1)}$statusTag  ';
+    final projectLine = '  Project: $projectSlug';
+    final projPad = boxWidth - 2 - projectLine.length;
+    final projectLinePadded = '$projectLine${' ' * (projPad > 0 ? projPad : 0)}';
+    final stackLine = '  Stack: $stack  |  Task: $taskLabel  |  $speedLabel';
+    final stackPad = boxWidth - 2 - stackLine.length;
+    final stackLinePadded = '$stackLine${' ' * (stackPad > 0 ? stackPad : 0)}';
+
     _controller.add(const TerminalLine(text: '', type: LineType.blank));
     _controller.add(TerminalLine(
-      text: '\u2500' * 50,
-      type: LineType.comment,
-    ));
-    _controller.add(TerminalLine(
-      text: '  Agent: $agentDisplayName   Role: ${agent.role}',
+      text: '\u2554${'═' * boxWidth}\u2557',
       type: LineType.agent,
     ));
     _controller.add(TerminalLine(
-      text: '\u2500' * 50,
-      type: LineType.comment,
+      text: '\u2551$nameLinePadded\u2551',
+      type: LineType.agent,
+    ));
+    _controller.add(TerminalLine(
+      text: '\u2551$projectLinePadded\u2551',
+      type: LineType.agent,
+    ));
+    _controller.add(TerminalLine(
+      text: '\u2551$stackLinePadded\u2551',
+      type: LineType.agent,
+    ));
+    _controller.add(TerminalLine(
+      text: '\u255A${'═' * boxWidth}\u255D',
+      type: LineType.agent,
     ));
     _controller.add(const TerminalLine(text: '', type: LineType.blank));
 

@@ -60,6 +60,16 @@ class _TerminalViewState extends ConsumerState<TerminalView>
   // Share hint state
   Timer? _shareHintTimer;
 
+  // Status bar state
+  Timer? _clockTimer;
+  Timer? _batteryLevelTimer;
+  String _clockText = '';
+  int _batteryLevel = 100;
+
+  // Scenario transition animation
+  double _terminalOpacity = 1.0;
+  int _lastLineCount = 0;
+
   @override
   void initState() {
     super.initState();
@@ -75,6 +85,9 @@ class _TerminalViewState extends ConsumerState<TerminalView>
       });
     _cursorController.forward();
 
+    // Initialize clock text immediately
+    _updateClock();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_usesExternalEngine) {
         _engine = widget.engine;
@@ -85,6 +98,7 @@ class _TerminalViewState extends ConsumerState<TerminalView>
         _updateWakelock();
         _showMissionToast();
         _scheduleShareHint();
+        _startStatusBarTimers();
       }
     });
   }
@@ -182,6 +196,95 @@ class _TerminalViewState extends ConsumerState<TerminalView>
         ),
       ),
     );
+  }
+
+  // --- Status bar methods ---
+
+  void _updateClock() {
+    final now = DateTime.now();
+    final h = now.hour.toString().padLeft(2, '0');
+    final m = now.minute.toString().padLeft(2, '0');
+    final s = now.second.toString().padLeft(2, '0');
+    _clockText = '$h:$m:$s';
+  }
+
+  void _startStatusBarTimers() {
+    _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() => _updateClock());
+    });
+    _fetchBatteryLevel();
+    _batteryLevelTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (!mounted) return;
+      _fetchBatteryLevel();
+    });
+  }
+
+  Future<void> _fetchBatteryLevel() async {
+    try {
+      final level = await _battery.batteryLevel;
+      if (mounted) {
+        setState(() => _batteryLevel = level);
+      }
+    } catch (_) {}
+  }
+
+  Widget _buildStatusBar(TerminalTheme theme, SettingsState settings) {
+    final project = DailyProjectEngine.today();
+    final projectSlug = (settings.profile.isConfigured && settings.profile.projectSlug.isNotEmpty)
+        ? settings.profile.projectSlug
+        : project.slug;
+    final lang = settings.language.isNotEmpty ? settings.language : 'python';
+    final speed = '${settings.speedFactor}x';
+
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
+      height: 24,
+      child: Container(
+        color: theme.background,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        alignment: Alignment.centerLeft,
+        child: Text(
+          '\u25C8 $projectSlug   $lang   $speed   bat:$_batteryLevel%   $_clockText',
+          style: TextStyle(
+            color: theme.textComment,
+            fontSize: 10,
+            fontFamily: 'JetBrains Mono',
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    );
+  }
+
+  // --- Scenario transition ---
+
+  void _checkScenarioTransition(List<TerminalLine> lines) {
+    if (lines.length > _lastLineCount) {
+      // Check new lines for scenario header start
+      for (int i = _lastLineCount; i < lines.length; i++) {
+        if (lines[i].text.contains('\u2554')) {
+          _triggerTransition();
+          break;
+        }
+      }
+      _lastLineCount = lines.length;
+    } else if (lines.length < _lastLineCount) {
+      // Lines were cleared
+      _lastLineCount = lines.length;
+    }
+  }
+
+  void _triggerTransition() {
+    setState(() => _terminalOpacity = 0.1);
+    Future.delayed(const Duration(milliseconds: 600), () {
+      if (mounted) {
+        setState(() => _terminalOpacity = 1.0);
+      }
+    });
   }
 
   // --- Share mode methods ---
@@ -471,6 +574,8 @@ class _TerminalViewState extends ConsumerState<TerminalView>
     _toastController?.dispose();
     _shareAutoTimeout?.cancel();
     _shareHintTimer?.cancel();
+    _clockTimer?.cancel();
+    _batteryLevelTimer?.cancel();
     super.dispose();
   }
 
@@ -486,13 +591,14 @@ class _TerminalViewState extends ConsumerState<TerminalView>
     final List<TerminalLine> displayLines;
     final TerminalTheme theme;
 
+    final settings = ref.watch(settingsProvider);
+
     if (_usesExternalEngine) {
       displayLines = _localLines;
-      theme = widget.theme ?? _currentTheme(ref.watch(settingsProvider));
+      theme = widget.theme ?? _currentTheme(settings);
     } else {
       final terminalState = ref.watch(terminalControllerProvider);
       displayLines = terminalState.lines;
-      final settings = ref.watch(settingsProvider);
       theme = _currentTheme(settings);
 
       ref.listen(settingsProvider, (prev, next) {
@@ -507,6 +613,9 @@ class _TerminalViewState extends ConsumerState<TerminalView>
 
     final effectiveEngine = _usesExternalEngine ? widget.engine : _engine;
 
+    // Check for scenario transitions
+    _checkScenarioTransition(displayLines);
+
     return GestureDetector(
       onTap: _toggleShareMode,
       child: Stack(
@@ -518,13 +627,17 @@ class _TerminalViewState extends ConsumerState<TerminalView>
               color: theme.background,
               child: Stack(
                 children: [
-                  CustomPaint(
-                    painter: TerminalPainter(
-                      lines: displayLines,
-                      theme: theme,
-                      showCursor: _cursorVisible,
+                  AnimatedOpacity(
+                    opacity: _terminalOpacity,
+                    duration: Duration(milliseconds: _terminalOpacity < 1.0 ? 600 : 400),
+                    child: CustomPaint(
+                      painter: TerminalPainter(
+                        lines: displayLines,
+                        theme: theme,
+                        showCursor: _cursorVisible,
+                      ),
+                      size: Size.infinite,
                     ),
-                    size: Size.infinite,
                   ),
                   if (!_usesExternalEngine)
                     _buildMissionToast(theme),
@@ -552,6 +665,9 @@ class _TerminalViewState extends ConsumerState<TerminalView>
                   // Watermark badge in share mode (inside RepaintBoundary)
                   if (_shareMode)
                     _buildWatermarkBadge(theme),
+                  // Status bar at the bottom
+                  if (!_shareMode && widget.showAgentHeader)
+                    _buildStatusBar(theme, settings),
                 ],
               ),
             ),
