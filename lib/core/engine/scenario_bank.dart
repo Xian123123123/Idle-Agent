@@ -1,6 +1,7 @@
 import '../models/terminal_line.dart';
 import '../models/agent_model.dart';
 import 'token_bank.dart';
+import 'progress_bar_builder.dart';
 
 typedef Scenario = List<TerminalLine> Function();
 
@@ -173,14 +174,25 @@ class ScenarioBank {
     double loss = 2.4 + TokenBank.rng.nextDouble() * 0.8;
     double acc = 0.1 + TokenBank.rng.nextDouble() * 0.1;
 
+    const barWidth = 20;
     for (int i = 1; i <= displayEpochs; i++) {
       loss *= (0.88 + TokenBank.rng.nextDouble() * 0.08);
       acc += (1.0 - acc) * (0.05 + TokenBank.rng.nextDouble() * 0.08);
       final epoch = numEpochs > 20 ? (i * numEpochs ~/ displayEpochs) : i;
+      final progress = i / displayEpochs;
+      final filled = (progress * barWidth).round();
+      final empty = barWidth - filled;
+      final bar = '${'█' * filled}${'░' * empty}';
+      final pct = (progress * 100).round();
       lines.add(TerminalLine(
-        text: '  epoch $epoch/$numEpochs  loss: ${loss.toStringAsFixed(4)}  acc: ${(acc * 100).toStringAsFixed(1)}%',
-        type: LineType.code,
+        text: '  Epoch $epoch/$numEpochs [$bar] $pct%',
+        type: LineType.system,
         delayMs: TokenBank.randInt(150, 350),
+      ));
+      lines.add(TerminalLine(
+        text: '    loss: ${loss.toStringAsFixed(4)}  acc: ${(acc * 100).toStringAsFixed(1)}%',
+        type: LineType.code,
+        delayMs: TokenBank.randInt(80, 150),
       ));
     }
 
@@ -326,6 +338,8 @@ class ScenarioBank {
 
     lines.addAll([
       TerminalLine(text: '', type: LineType.blank, delayMs: 100),
+      ...ProgressBarBuilder.build(label: 'Building image', durationSteps: 6, msPerStep: 250),
+      TerminalLine(text: '', type: LineType.blank, delayMs: 100),
       TerminalLine(text: '\u2713 built $project:latest (${TokenBank.randInt(120, 450)}MB)', type: LineType.success, delayMs: 200),
       TerminalLine(text: '> docker push registry.io/$project:latest', type: LineType.system, delayMs: 250),
       TerminalLine(text: '\u2713 pushed to container registry', type: LineType.success, delayMs: 300),
@@ -382,6 +396,7 @@ class ScenarioBank {
       TerminalLine(text: '  Stage 1/3: Test', type: LineType.system, delayMs: 200),
       TerminalLine(text: '    > pip install -r requirements-dev.txt', type: LineType.code, delayMs: 150),
       TerminalLine(text: '    > pytest --cov=src --cov-report=xml', type: LineType.code, delayMs: 300),
+      ...ProgressBarBuilder.build(label: 'Running tests', durationSteps: 4, msPerStep: 200),
       TerminalLine(text: '    \u2713 ${TokenBank.randInt(50, 200)} tests passed', type: LineType.success, delayMs: 200),
       TerminalLine(text: '    \u2713 coverage: $coverage%', type: LineType.success, delayMs: 150),
       TerminalLine(text: '', type: LineType.blank, delayMs: 100),
@@ -538,6 +553,34 @@ class ScenarioBank {
     ]);
 
     return lines;
+  }
+
+  // ── Git Log Scene ──
+
+  static List<TerminalLine> gitLogScene() {
+    final hash1 = _hexId();
+    final hash2 = _hexId();
+    final hash3 = _hexId();
+    final project = TokenBank.pick(TokenBank.projectNames);
+    return [
+      TerminalLine(text: '', type: LineType.blank, delayMs: 400),
+      TerminalLine(text: '> git log --oneline -5', type: LineType.system, delayMs: 600),
+      TerminalLine(text: '$hash1 feat: add transformer encoder layer', type: LineType.code, delayMs: 200),
+      TerminalLine(text: '$hash2 fix: resolve attention mask broadcasting', type: LineType.code, delayMs: 120),
+      TerminalLine(text: '$hash3 refactor: extract positional encoding', type: LineType.code, delayMs: 120),
+      TerminalLine(text: '', type: LineType.blank, delayMs: 300),
+      TerminalLine(text: '> git diff --stat HEAD~1', type: LineType.system, delayMs: 400),
+      TerminalLine(text: ' src/models/encoder.py  | 47 +++++++++++++----', type: LineType.success, delayMs: 200),
+      TerminalLine(text: ' tests/test_encoder.py  | 23 +++++++++', type: LineType.success, delayMs: 120),
+      TerminalLine(text: ' 2 files changed, 70 insertions(+), 4 deletions(-)', type: LineType.agent, delayMs: 200),
+      TerminalLine(text: '', type: LineType.blank, delayMs: 300),
+      TerminalLine(text: '> git push origin main', type: LineType.system, delayMs: 500),
+      TerminalLine(text: 'Enumerating objects: 5, done.', type: LineType.code, delayMs: 300),
+      TerminalLine(text: 'Writing objects: 100% (3/3), 2.41 KiB | 2.41 MiB/s, done.', type: LineType.code, delayMs: 400),
+      TerminalLine(text: 'To github.com:agent/$project.git', type: LineType.code, delayMs: 200),
+      TerminalLine(text: '   $hash2..$hash1  main -> main', type: LineType.success, delayMs: 200),
+      const TerminalLine(text: '', type: LineType.blank),
+    ];
   }
 
   // ── Helpers ──

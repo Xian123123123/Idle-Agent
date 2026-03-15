@@ -14,6 +14,7 @@ class SimulationEngine {
   Stream<TerminalLine> get lines => _controller.stream;
 
   bool _running = false;
+  late DateTime _simulatedTime;
 
   void start() {
     _running = true;
@@ -29,8 +30,43 @@ class SimulationEngine {
     _controller.close();
   }
 
+  String _timestamp() {
+    final h = _simulatedTime.hour.toString().padLeft(2, '0');
+    final m = _simulatedTime.minute.toString().padLeft(2, '0');
+    final s = _simulatedTime.second.toString().padLeft(2, '0');
+    return '[$h:$m:$s]';
+  }
+
+  void _advanceTime() {
+    _simulatedTime = _simulatedTime.add(
+      Duration(milliseconds: 50 + TokenBank.rng.nextInt(1951)),
+    );
+  }
+
+  TerminalLine _withTimestamp(TerminalLine line) {
+    if (line.type == LineType.code || line.type == LineType.blank || line.type == LineType.comment) {
+      return line;
+    }
+    _advanceTime();
+    return TerminalLine(
+      text: '${_timestamp()} ${line.text}',
+      type: line.type,
+      delayMs: line.delayMs,
+    );
+  }
+
   Future<void> _runNextScenario() async {
     if (!_running) return;
+
+    // Initialize simulated time for this scenario
+    _simulatedTime = DateTime(
+      2026,
+      1 + TokenBank.rng.nextInt(12),
+      1 + TokenBank.rng.nextInt(28),
+      TokenBank.rng.nextInt(24),
+      TokenBank.rng.nextInt(60),
+      TokenBank.rng.nextInt(60),
+    );
 
     final scenarios = ScenarioBank.scenariosFor(agent);
     final scenario = TokenBank.pick(scenarios);
@@ -57,7 +93,19 @@ class SimulationEngine {
       final delay = (line.delayMs / speedFactor).round();
       await Future.delayed(Duration(milliseconds: delay));
       if (!_running) return;
-      _controller.add(line);
+      _controller.add(_withTimestamp(line));
+    }
+
+    // 10% chance of git log after each scenario
+    if (TokenBank.randInt(0, 10) == 0) {
+      final gitLines = ScenarioBank.gitLogScene();
+      for (final line in gitLines) {
+        if (!_running) return;
+        final delay = (line.delayMs / speedFactor).round();
+        await Future.delayed(Duration(milliseconds: delay));
+        if (!_running) return;
+        _controller.add(_withTimestamp(line));
+      }
     }
 
     // Pause between scenarios
