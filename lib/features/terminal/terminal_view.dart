@@ -88,7 +88,12 @@ class _TerminalViewState extends ConsumerState<TerminalView>
       orElse: () => Agents.gptEngineer,
     );
     _engine?.dispose();
-    _engine = SimulationEngine(agent: agent, speedFactor: settings.speedFactor);
+    final profile = settings.profile;
+    _engine = SimulationEngine(
+      agent: agent,
+      speedFactor: settings.speedFactor,
+      profile: profile.isConfigured ? profile : null,
+    );
     ref.read(terminalControllerProvider.notifier).clear();
     ref.read(terminalControllerProvider.notifier).subscribe(_engine!);
     _engine!.start();

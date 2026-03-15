@@ -1,14 +1,16 @@
 import 'dart:async';
 import '../models/terminal_line.dart';
 import '../models/agent_model.dart';
+import '../models/user_profile.dart';
 import 'scenario_bank.dart';
 import 'token_bank.dart';
 
 class SimulationEngine {
   final AgentModel agent;
   final double speedFactor;
+  final UserProfile? profile;
 
-  SimulationEngine({required this.agent, this.speedFactor = 1.0});
+  SimulationEngine({required this.agent, this.speedFactor = 1.0, this.profile});
 
   final _controller = StreamController<TerminalLine>.broadcast();
   Stream<TerminalLine> get lines => _controller.stream;
@@ -68,18 +70,24 @@ class SimulationEngine {
       TokenBank.rng.nextInt(60),
     );
 
+    // Set profile on ScenarioBank so scenarios can read it
+    ScenarioBank.activeProfile = (profile != null && profile!.isConfigured) ? profile : null;
+
     final scenarios = ScenarioBank.scenariosFor(agent);
     final scenario = TokenBank.pick(scenarios);
     final lines = scenario();
 
     // Add agent header
+    final agentDisplayName = (profile != null && profile!.isConfigured && profile!.agentName.isNotEmpty)
+        ? profile!.agentName
+        : agent.name;
     _controller.add(const TerminalLine(text: '', type: LineType.blank));
     _controller.add(TerminalLine(
       text: '\u2500' * 50,
       type: LineType.comment,
     ));
     _controller.add(TerminalLine(
-      text: '  Agent: ${agent.name}   Role: ${agent.role}',
+      text: '  Agent: $agentDisplayName   Role: ${agent.role}',
       type: LineType.agent,
     ));
     _controller.add(TerminalLine(

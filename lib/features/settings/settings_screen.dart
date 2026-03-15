@@ -6,6 +6,7 @@ import '../../core/models/agent_model.dart';
 import '../../core/models/theme_model.dart';
 import '../paywall/paywall_screen.dart';
 import 'settings_provider.dart';
+import 'profile_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -25,6 +26,8 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          _buildPersonaliseCard(context, settings),
+          const SizedBox(height: 24),
           _sectionHeader('Desk Mode'),
           const SizedBox(height: 8),
           _buildDeskMode(context, ref, settings),
@@ -450,6 +453,100 @@ class SettingsScreen extends ConsumerWidget {
         ),
       );
     }
+  }
+
+  Widget _buildPersonaliseCard(BuildContext context, SettingsState settings) {
+    final profile = settings.profile;
+    final isConfigured = profile.isConfigured;
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ProfileScreen()),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFF161B22),
+          border: Border.all(
+            color: isConfigured ? const Color(0xFF00FF41).withValues(alpha: 0.5) : const Color(0xFF30363D),
+          ),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  isConfigured ? Icons.person : Icons.person_outline,
+                  color: const Color(0xFF00FF41),
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'PERSONALISE YOUR AGENT',
+                    style: TextStyle(
+                      color: Color(0xFF00FF41),
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'JetBrains Mono',
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                const Icon(Icons.chevron_right, color: Color(0xFF8B949E), size: 20),
+              ],
+            ),
+            if (isConfigured) ...[
+              const SizedBox(height: 8),
+              if (profile.agentName.isNotEmpty)
+                Text(
+                  'Agent: ${profile.agentName}',
+                  style: const TextStyle(
+                    color: Color(0xFF8B949E),
+                    fontFamily: 'JetBrains Mono',
+                    fontSize: 11,
+                  ),
+                ),
+              if (profile.projectName.isNotEmpty)
+                Text(
+                  'Project: ${profile.projectName} (${profile.projectSlug})',
+                  style: const TextStyle(
+                    color: Color(0xFF8B949E),
+                    fontFamily: 'JetBrains Mono',
+                    fontSize: 11,
+                  ),
+                ),
+              if (profile.customModules.isNotEmpty)
+                Text(
+                  'Modules: ${profile.customModules.join(", ")}',
+                  style: const TextStyle(
+                    color: Color(0xFF8B949E),
+                    fontFamily: 'JetBrains Mono',
+                    fontSize: 11,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+            ] else
+              const Padding(
+                padding: EdgeInsets.only(top: 4),
+                child: Text(
+                  'Tap to customise project names, modules, and more',
+                  style: TextStyle(
+                    color: Color(0xFF6E7681),
+                    fontFamily: 'JetBrains Mono',
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildAbout() {

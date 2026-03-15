@@ -1,11 +1,29 @@
 import '../models/terminal_line.dart';
 import '../models/agent_model.dart';
+import '../models/user_profile.dart';
 import 'token_bank.dart';
 import 'progress_bar_builder.dart';
 
 typedef Scenario = List<TerminalLine> Function();
 
 class ScenarioBank {
+  /// Set by SimulationEngine before running scenarios.
+  /// Scenarios read from this to personalise output.
+  static UserProfile? activeProfile;
+
+  /// Pick a project name, using profile slug when configured.
+  static String _projectName() {
+    final p = activeProfile;
+    if (p != null && p.projectSlug.isNotEmpty) return p.projectSlug;
+    return _projectName();
+  }
+
+  /// Pick a module name, preferring profile custom modules when available.
+  static String _moduleName() {
+    final p = activeProfile;
+    if (p != null && p.customModules.isNotEmpty) return TokenBank.pick(p.customModules);
+    return _moduleName();
+  }
   static List<Scenario> scenariosFor(AgentModel agent) {
     switch (agent.id) {
       case 'gpt_engineer':
@@ -24,8 +42,8 @@ class ScenarioBank {
   // ── GPT Engineer Scenarios ──
 
   static List<TerminalLine> buildModule() {
-    final project = TokenBank.pick(TokenBank.projectNames);
-    final module = TokenBank.pick(TokenBank.moduleNames);
+    final project = _projectName();
+    final module = _moduleName();
     final func = TokenBank.pick(TokenBank.functionNames);
     final dModel = TokenBank.pick(TokenBank.dModels);
     final nHead = TokenBank.pick(TokenBank.nHeads);
@@ -69,8 +87,8 @@ class ScenarioBank {
   }
 
   static List<TerminalLine> apiDesign() {
-    final project = TokenBank.pick(TokenBank.projectNames);
-    final module = TokenBank.pick(TokenBank.moduleNames);
+    final project = _projectName();
+    final module = _moduleName();
 
     return [
       TerminalLine(text: '> scaffolding REST API for $project', type: LineType.system, delayMs: 200),
@@ -100,8 +118,8 @@ class ScenarioBank {
   }
 
   static List<TerminalLine> debugSession() {
-    final project = TokenBank.pick(TokenBank.projectNames);
-    final module = TokenBank.pick(TokenBank.moduleNames);
+    final project = _projectName();
+    final module = _moduleName();
     final error = TokenBank.pick(TokenBank.errors);
     final func = TokenBank.pick(TokenBank.functionNames);
 
@@ -130,8 +148,8 @@ class ScenarioBank {
   }
 
   static List<TerminalLine> refactor() {
-    final project = TokenBank.pick(TokenBank.projectNames);
-    final module = TokenBank.pick(TokenBank.moduleNames);
+    final project = _projectName();
+    final module = _moduleName();
     final lines = TokenBank.randInt(200, 800);
 
     return [
@@ -159,7 +177,7 @@ class ScenarioBank {
   // ── Researcher Scenarios ──
 
   static List<TerminalLine> modelTraining() {
-    final project = TokenBank.pick(TokenBank.projectNames);
+    final project = _projectName();
     final dModel = TokenBank.pick(TokenBank.dModels);
     final numEpochs = TokenBank.pick(TokenBank.epochs);
     final displayEpochs = numEpochs > 20 ? 15 : numEpochs;
@@ -208,7 +226,7 @@ class ScenarioBank {
   }
 
   static List<TerminalLine> ablationStudy() {
-    final project = TokenBank.pick(TokenBank.projectNames);
+    final project = _projectName();
     final configs = TokenBank.randInt(4, 8);
 
     final lines = <TerminalLine>[
@@ -248,7 +266,7 @@ class ScenarioBank {
 
   static List<TerminalLine> paperImplementation() {
     final arxivId = '${TokenBank.randInt(2301, 2412)}.${TokenBank.randInt(10000, 99999)}';
-    final project = TokenBank.pick(TokenBank.projectNames);
+    final project = _projectName();
 
     return [
       TerminalLine(text: '> reading arxiv:$arxivId', type: LineType.system, delayMs: 200),
@@ -272,7 +290,7 @@ class ScenarioBank {
   }
 
   static List<TerminalLine> experimentLogging() {
-    final project = TokenBank.pick(TokenBank.projectNames);
+    final project = _projectName();
     final runId = 'run-${TokenBank.randInt(100, 999)}';
 
     return [
@@ -299,7 +317,7 @@ class ScenarioBank {
   // ── DevOps Scenarios ──
 
   static List<TerminalLine> dockerBuild() {
-    final project = TokenBank.pick(TokenBank.projectNames);
+    final project = _projectName();
     final steps = TokenBank.randInt(8, 14);
 
     final lines = <TerminalLine>[
@@ -349,7 +367,7 @@ class ScenarioBank {
   }
 
   static List<TerminalLine> k8sDeploy() {
-    final project = TokenBank.pick(TokenBank.projectNames);
+    final project = _projectName();
     final replicas = TokenBank.randInt(3, 8);
 
     final lines = <TerminalLine>[
@@ -387,7 +405,7 @@ class ScenarioBank {
   }
 
   static List<TerminalLine> ciPipeline() {
-    final project = TokenBank.pick(TokenBank.projectNames);
+    final project = _projectName();
     final coverage = TokenBank.randInt(78, 98);
 
     return [
@@ -415,7 +433,7 @@ class ScenarioBank {
   }
 
   static List<TerminalLine> infraProvision() {
-    final project = TokenBank.pick(TokenBank.projectNames);
+    final project = _projectName();
     final resources = TokenBank.randInt(8, 18);
 
     return [
@@ -445,8 +463,8 @@ class ScenarioBank {
   // ── Startup CTO Scenarios ──
 
   static List<TerminalLine> codeReview() {
-    final project = TokenBank.pick(TokenBank.projectNames);
-    final module = TokenBank.pick(TokenBank.moduleNames);
+    final project = _projectName();
+    final module = _moduleName();
     final prNum = TokenBank.randInt(100, 999);
 
     return [
@@ -470,7 +488,7 @@ class ScenarioBank {
   }
 
   static List<TerminalLine> architectureReview() {
-    final project = TokenBank.pick(TokenBank.projectNames);
+    final project = _projectName();
 
     return [
       TerminalLine(text: '> architecture review: $project', type: LineType.system, delayMs: 200),
@@ -495,7 +513,7 @@ class ScenarioBank {
   }
 
   static List<TerminalLine> techDebt() {
-    final project = TokenBank.pick(TokenBank.projectNames);
+    final project = _projectName();
     final issues = TokenBank.randInt(12, 30);
 
     return [
@@ -506,7 +524,7 @@ class ScenarioBank {
       TerminalLine(text: '  [P0] Deprecated ${TokenBank.pick(TokenBank.libraries)} — security risk', type: LineType.error, delayMs: 150),
       TerminalLine(text: '  [P0] Hardcoded secrets in config.py', type: LineType.error, delayMs: 150),
       TerminalLine(text: '  [P1] No database migrations for 3 schema changes', type: LineType.error, delayMs: 150),
-      TerminalLine(text: '  [P1] Test coverage below 60% in ${TokenBank.pick(TokenBank.moduleNames)}', type: LineType.error, delayMs: 150),
+      TerminalLine(text: '  [P1] Test coverage below 60% in ${_moduleName()}', type: LineType.error, delayMs: 150),
       TerminalLine(text: '  [P2] ${TokenBank.randInt(8, 20)} TODO comments older than 6 months', type: LineType.comment, delayMs: 150),
       TerminalLine(text: '  [P2] Unused dependencies: ${TokenBank.randInt(3, 8)} packages', type: LineType.comment, delayMs: 150),
       TerminalLine(text: '', type: LineType.blank, delayMs: 100),
@@ -535,7 +553,7 @@ class ScenarioBank {
       final points = TokenBank.pick(const [1, 2, 3, 5, 8]);
       totalPoints += points;
       final assignee = TokenBank.pick(teamMembers);
-      final module = TokenBank.pick(TokenBank.moduleNames);
+      final module = _moduleName();
       lines.add(TerminalLine(
         text: '  [$points pts] $module — assigned to $assignee',
         type: LineType.code,
@@ -561,7 +579,7 @@ class ScenarioBank {
     final hash1 = _hexId();
     final hash2 = _hexId();
     final hash3 = _hexId();
-    final project = TokenBank.pick(TokenBank.projectNames);
+    final project = _projectName();
     return [
       TerminalLine(text: '', type: LineType.blank, delayMs: 400),
       TerminalLine(text: '> git log --oneline -5', type: LineType.system, delayMs: 600),
