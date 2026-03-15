@@ -8,6 +8,7 @@ class SettingsState {
   final String language;
   final bool isPro;
   final int batteryPauseLevel;
+  final bool deskMode;
 
   const SettingsState({
     this.agentId = 'gpt_engineer',
@@ -16,6 +17,7 @@ class SettingsState {
     this.language = 'python',
     this.isPro = false,
     this.batteryPauseLevel = 20,
+    this.deskMode = true,
   });
 
   SettingsState copyWith({
@@ -25,6 +27,7 @@ class SettingsState {
     String? language,
     bool? isPro,
     int? batteryPauseLevel,
+    bool? deskMode,
   }) {
     return SettingsState(
       agentId: agentId ?? this.agentId,
@@ -33,6 +36,7 @@ class SettingsState {
       language: language ?? this.language,
       isPro: isPro ?? this.isPro,
       batteryPauseLevel: batteryPauseLevel ?? this.batteryPauseLevel,
+      deskMode: deskMode ?? this.deskMode,
     );
   }
 }
@@ -51,6 +55,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       language: prefs.getString('language') ?? 'python',
       isPro: prefs.getBool('isPro') ?? false,
       batteryPauseLevel: prefs.getInt('batteryPauseLevel') ?? 20,
+      deskMode: prefs.getBool('deskMode') ?? true,
     );
   }
 
@@ -88,6 +93,12 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     state = state.copyWith(batteryPauseLevel: level);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('batteryPauseLevel', level);
+  }
+
+  Future<void> setDeskMode(bool enabled) async {
+    state = state.copyWith(deskMode: enabled);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('deskMode', enabled);
   }
 }
 

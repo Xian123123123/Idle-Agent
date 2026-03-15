@@ -195,44 +195,100 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget _page3() {
     return Padding(
       padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text(
-            'Enable the screensaver',
-            style: TextStyle(
-              color: Color(0xFF00FF41),
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(height: 24),
+            const Text(
+              'How to use',
+              style: TextStyle(
+                color: Color(0xFF00FF41),
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          // Instructions
-          _instructionStep('1', 'Open Settings \u2192 Display \u2192 Screen Saver'),
-          _instructionStep('2', 'Select "Idle Agent"'),
-          _instructionStep('3', 'Tap "When to start" \u2192 While Charging'),
-          const SizedBox(height: 40),
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton(
-              onPressed: _finish,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00FF41),
-                foregroundColor: Colors.black,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+            const SizedBox(height: 24),
+            // Option 1: Desk Mode (primary)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF161B22),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF00FF41)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Desk Mode \u2014 works on all phones',
+                      style: TextStyle(color: Color(0xFF00FF41), fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  _instructionStep('1', 'Open Idle Agent'),
+                  _instructionStep('2', 'Plug in your charger'),
+                  _instructionStep('3', 'Desk Mode keeps the screen on automatically'),
+                  _instructionStep('4', 'Prop your phone up and enjoy'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Option 2: Android Screensaver (collapsed)
+            _buildScreensaverOption(),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: _finish,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00FF41),
+                  foregroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text(
+                  "Let's go",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
-              child: const Text(
-                "Let's go",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildScreensaverOption() {
+    return ExpansionTile(
+      tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+      collapsedBackgroundColor: const Color(0xFF161B22),
+      backgroundColor: const Color(0xFF161B22),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      iconColor: const Color(0xFF8B949E),
+      collapsedIconColor: const Color(0xFF8B949E),
+      title: Text(
+        'Android Screensaver (Pixel / stock Android only)',
+        style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 13),
+      ),
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(
+            children: [
+              _instructionStep('1', 'Open Settings \u2192 Display \u2192 Screen Saver'),
+              _instructionStep('2', 'Select "Idle Agent"'),
+              _instructionStep('3', 'Tap "When to start" \u2192 While Charging'),
+              Text(
+                'Not available on Samsung, Xiaomi, or most other brands.',
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 11),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

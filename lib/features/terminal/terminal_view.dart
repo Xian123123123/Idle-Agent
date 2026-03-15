@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:battery_plus/battery_plus.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../core/models/theme_model.dart';
 import '../../core/models/agent_model.dart';
 import '../../core/models/terminal_line.dart';
@@ -44,6 +45,7 @@ class _TerminalViewState extends ConsumerState<TerminalView>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _startEngine();
       _startBatteryMonitoring();
+      _updateWakelock();
     });
   }
 
@@ -87,8 +89,18 @@ class _TerminalViewState extends ConsumerState<TerminalView>
     });
   }
 
+  void _updateWakelock() {
+    final settings = ref.read(settingsProvider);
+    if (settings.deskMode) {
+      WakelockPlus.enable();
+    } else {
+      WakelockPlus.disable();
+    }
+  }
+
   @override
   void dispose() {
+    WakelockPlus.disable();
     _cursorController.dispose();
     _engine?.dispose();
     _batterySubscription?.cancel();
@@ -108,10 +120,12 @@ class _TerminalViewState extends ConsumerState<TerminalView>
     final settings = ref.watch(settingsProvider);
     final theme = _currentTheme(settings);
 
-    // Restart engine when agent or speed changes
     ref.listen(settingsProvider, (prev, next) {
       if (prev?.agentId != next.agentId || prev?.speedFactor != next.speedFactor) {
         _startEngine();
+      }
+      if (prev?.deskMode != next.deskMode) {
+        _updateWakelock();
       }
     });
 

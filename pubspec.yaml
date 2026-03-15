@@ -14,6 +14,8 @@ dependencies:
   google_fonts: ^6.2.1
   purchases_flutter: ^8.0.0
   battery_plus: ^6.0.1
+  wakelock_plus: ^1.2.0
+  android_intent_plus: ^5.0.0
 
 dev_dependencies:
   flutter_test:

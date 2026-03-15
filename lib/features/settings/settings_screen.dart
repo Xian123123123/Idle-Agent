@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:android_intent_plus/android_intent.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import '../../core/models/agent_model.dart';
 import '../../core/models/theme_model.dart';
 import '../paywall/paywall_screen.dart';
@@ -23,6 +25,14 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          _sectionHeader('Desk Mode'),
+          const SizedBox(height: 8),
+          _buildDeskMode(context, ref, settings),
+          const SizedBox(height: 24),
+          _sectionHeader('Android Screensaver'),
+          const SizedBox(height: 8),
+          _buildScreensaverButton(context),
+          const SizedBox(height: 24),
           _sectionHeader('Agent Selection'),
           const SizedBox(height: 8),
           _buildAgentGrid(context, ref, settings),
@@ -285,6 +295,100 @@ class SettingsScreen extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  Widget _buildDeskMode(BuildContext context, WidgetRef ref, SettingsState settings) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF161B22),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Keep screen on',
+                        style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 4),
+                    Text('Keep screen on while app is open',
+                        style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12)),
+                  ],
+                ),
+              ),
+              Switch(
+                value: settings.deskMode,
+                activeColor: const Color(0xFF00FF41),
+                onChanged: (value) {
+                  ref.read(settingsProvider.notifier).setDeskMode(value);
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScreensaverButton(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF161B22),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _openDreamSettings(context),
+              icon: const Icon(Icons.settings, size: 16),
+              label: const Text('Set as Android Screensaver (optional)'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF00BCD4),
+                side: const BorderSide(color: Color(0xFF30363D)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Works on Pixel and stock Android. Not available on Samsung, Xiaomi, or most other brands.',
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 11),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openDreamSettings(BuildContext context) async {
+    if (defaultTargetPlatform != TargetPlatform.android) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Screensaver settings are only available on Android.')),
+      );
+      return;
+    }
+    try {
+      const intent = AndroidIntent(
+        action: 'android.settings.DREAM_SETTINGS',
+      );
+      await intent.launch();
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Screensaver settings not available on this device. Use Desk Mode instead \u2014 it works on all phones.'),
+          duration: Duration(seconds: 4),
+        ),
+      );
+    }
   }
 
   Widget _buildAbout() {
