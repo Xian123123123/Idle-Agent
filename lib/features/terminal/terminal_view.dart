@@ -7,6 +7,7 @@ import '../../core/models/theme_model.dart';
 import '../../core/models/agent_model.dart';
 import '../../core/models/terminal_line.dart';
 import '../../core/engine/simulation_engine.dart';
+import '../../core/engine/daily_project.dart';
 import '../settings/settings_provider.dart';
 import 'terminal_controller.dart';
 import 'terminal_painter.dart';
@@ -28,7 +29,7 @@ class TerminalView extends ConsumerStatefulWidget {
 }
 
 class _TerminalViewState extends ConsumerState<TerminalView>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _cursorController;
   SimulationEngine? _engine;
   bool _cursorVisible = true;
@@ -41,6 +42,12 @@ class _TerminalViewState extends ConsumerState<TerminalView>
   List<TerminalLine> _localLines = [];
   StreamSubscription<TerminalLine>? _localSubscription;
   static const _maxLines = 200;
+
+  // "Today's Mission" toast — shown once per app session
+  static bool _missionToastShown = false;
+  AnimationController? _toastController;
+  double _toastOpacity = 0.0;
+  Timer? _toastTimer;
 
   @override
   void initState() {
@@ -65,6 +72,7 @@ class _TerminalViewState extends ConsumerState<TerminalView>
         _startEngine();
         _startBatteryMonitoring();
         _updateWakelock();
+        _showMissionToast();
       }
     });
   }
@@ -79,6 +87,89 @@ class _TerminalViewState extends ConsumerState<TerminalView>
         }
       });
     });
+  }
+
+  void _showMissionToast() {
+    if (_missionToastShown || _usesExternalEngine) return;
+    _missionToastShown = true;
+
+    // Fade in after a short delay
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (!mounted) return;
+      setState(() => _toastOpacity = 1.0);
+
+      // Hold for ~4 seconds, then fade out
+      _toastTimer = Timer(const Duration(milliseconds: 4000), () {
+        if (!mounted) return;
+        setState(() => _toastOpacity = 0.0);
+      });
+    });
+  }
+
+  Widget _buildMissionToast(TerminalTheme theme) {
+    final project = DailyProjectEngine.today();
+    return Positioned(
+      top: 48,
+      left: 16,
+      right: 16,
+      child: IgnorePointer(
+        child: AnimatedOpacity(
+          opacity: _toastOpacity,
+          duration: Duration(milliseconds: _toastOpacity == 1.0 ? 300 : 500),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: theme.background.withValues(alpha: 0.95),
+              border: Border.all(color: theme.textPrimary.withValues(alpha: 0.6)),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  "TODAY'S MISSION",
+                  style: TextStyle(
+                    color: theme.textPrimary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'JetBrains Mono',
+                    letterSpacing: 1.0,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '> ${project.slug}',
+                  style: TextStyle(
+                    color: theme.textSystem,
+                    fontSize: 11,
+                    fontFamily: 'JetBrains Mono',
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '# ${project.description}',
+                  style: TextStyle(
+                    color: theme.textComment,
+                    fontSize: 10,
+                    fontFamily: 'JetBrains Mono',
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Agent deployed. Beginning work...',
+                  style: TextStyle(
+                    color: theme.textSuccess,
+                    fontSize: 10,
+                    fontFamily: 'JetBrains Mono',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _startEngine() {
@@ -155,6 +246,8 @@ class _TerminalViewState extends ConsumerState<TerminalView>
     _cursorController.dispose();
     _batterySubscription?.cancel();
     _localSubscription?.cancel();
+    _toastTimer?.cancel();
+    _toastController?.dispose();
     super.dispose();
   }
 
@@ -204,6 +297,8 @@ class _TerminalViewState extends ConsumerState<TerminalView>
               ),
               size: Size.infinite,
             ),
+            if (!_usesExternalEngine)
+              _buildMissionToast(theme),
             if (widget.showAgentHeader && effectiveEngine != null)
               Positioned(
                 top: 8,

@@ -4,6 +4,7 @@ import 'package:android_intent_plus/android_intent.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import '../../core/models/agent_model.dart';
 import '../../core/models/theme_model.dart';
+import '../../core/engine/daily_project.dart';
 import '../paywall/paywall_screen.dart';
 import 'settings_provider.dart';
 import 'profile_screen.dart';
@@ -27,6 +28,8 @@ class SettingsScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         children: [
           _buildPersonaliseCard(context, settings),
+          const SizedBox(height: 24),
+          _buildDailyMissionCard(),
           const SizedBox(height: 24),
           _sectionHeader('Desk Mode'),
           const SizedBox(height: 8),
@@ -545,6 +548,102 @@ class SettingsScreen extends ConsumerWidget {
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDailyMissionCard() {
+    final today = DailyProjectEngine.today();
+    final week = DailyProjectEngine.upcomingWeek();
+    final now = DateTime.now();
+    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF161B22),
+        border: Border.all(color: const Color(0xFF00FF41).withValues(alpha: 0.4)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "TODAY'S MISSION",
+            style: TextStyle(
+              color: Color(0xFF00FF41),
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'JetBrains Mono',
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            today.name,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'JetBrains Mono',
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            today.description,
+            style: const TextStyle(
+              color: Color(0xFF8B949E),
+              fontSize: 11,
+              fontFamily: 'JetBrains Mono',
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'UPCOMING WEEK',
+            style: TextStyle(
+              color: Color(0xFF6E7681),
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'JetBrains Mono',
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 6),
+          ...List.generate(week.length, (i) {
+            final date = now.add(Duration(days: i));
+            final dayLabel = i == 0 ? 'Today' : dayNames[date.weekday - 1];
+            final project = week[i];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 3),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 44,
+                    child: Text(
+                      dayLabel,
+                      style: TextStyle(
+                        color: i == 0 ? const Color(0xFF00FF41) : const Color(0xFF6E7681),
+                        fontSize: 10,
+                        fontFamily: 'JetBrains Mono',
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      project.name,
+                      style: TextStyle(
+                        color: i == 0 ? Colors.white : const Color(0xFF8B949E),
+                        fontSize: 10,
+                        fontFamily: 'JetBrains Mono',
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
       ),
     );
   }

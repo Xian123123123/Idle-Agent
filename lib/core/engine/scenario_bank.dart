@@ -3,6 +3,7 @@ import '../models/agent_model.dart';
 import '../models/user_profile.dart';
 import 'token_bank.dart';
 import 'progress_bar_builder.dart';
+import 'daily_project.dart';
 
 typedef Scenario = List<TerminalLine> Function();
 
@@ -11,11 +12,12 @@ class ScenarioBank {
   /// Scenarios read from this to personalise output.
   static UserProfile? activeProfile;
 
-  /// Pick a project name, using profile slug when configured.
+  /// Pick a project name, using profile slug when configured,
+  /// falling back to today's daily project.
   static String _projectName() {
     final p = activeProfile;
     if (p != null && p.projectSlug.isNotEmpty) return p.projectSlug;
-    return _projectName();
+    return DailyProjectEngine.today().slug;
   }
 
   /// Pick a module name, preferring profile custom modules when available.
